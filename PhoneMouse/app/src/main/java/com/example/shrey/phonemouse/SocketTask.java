@@ -14,12 +14,11 @@ import java.net.UnknownHostException;
  * Created by area5 on 11/12/2017.
  */
 
-public class SocketTask extends AsyncTask<Void, Void, Void> {
+public class SocketTask extends AsyncTask<Double, Void, Void> {
     private static int UDP_SERVER_PORT = 9876;
 
     @Override
-    protected Void doInBackground(Void... voids) {
-        Log.d("START","!");
+    protected Void doInBackground(Double... velocity) {
         DatagramSocket socket = null;
         try {
             socket = new DatagramSocket(UDP_SERVER_PORT);
@@ -29,8 +28,8 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
         }
         while(true) {
             try {
-                String data = "Hello, World";
-                DatagramPacket packet = new DatagramPacket(data.getBytes(), data.length(), InetAddress.getByName("10.0.2.2"), UDP_SERVER_PORT);
+                String data = velocity[0] + "," + velocity[1] + "," + velocity[2];
+                DatagramPacket packet = new DatagramPacket(data.getBytes(), data.length(), InetAddress.getByName("10.194.21.182"), UDP_SERVER_PORT);
                 socket.send(packet);
             } catch (IOException e) {
                 e.printStackTrace();
