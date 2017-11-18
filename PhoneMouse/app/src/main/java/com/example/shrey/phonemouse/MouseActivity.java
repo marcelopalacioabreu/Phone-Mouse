@@ -1,6 +1,7 @@
 package com.example.shrey.phonemouse;
 
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -12,14 +13,17 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
+public class MouseActivity extends AppCompatActivity implements SensorEventListener {
 
+    public static final double ACCELERATION_THRESHOLD = .25;
+    public static final int RESET_COUNT = 100;
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
     private Sensor mGyroscope;
@@ -30,12 +34,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private double[] mVelocity;
     private Queue<Actions> mActionQueue;
 
-    private AsyncTask<Void, Void, Void> socketTask;
+    private AsyncTask<Void, Void, Void> mSocketTask;
+
+    private InetAddress mIpAddress;
+
+    private int mStationaryCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_mouse);
+
+        Intent intent = getIntent();
+
+        try {
+            InetAddress mIpAddress = InetAddress.getByName(intent.getStringExtra("IP_ADDRESS"));
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
+        mVelocity = new double[3];
+
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -53,13 +72,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_NORMAL);
 
-        mVelocity = new double[3];
         Arrays.fill(mVelocity, 0.0);
 
         mActionQueue = new LinkedList<>();
         //setup socket
-        socketTask = new SocketTask(mVelocity, mActionQueue);
-        socketTask.execute();
+        mSocketTask = new SocketTask(mVelocity, mActionQueue, mIpAddress);
+        mSocketTask.execute();
     }
 
     @Override
@@ -67,19 +85,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         mSensorManager.unregisterListener(this);
         //close socket
-        socketTask.cancel(true);
+        mSocketTask.cancel(true);
     }
 
+    //TODO reset values when staying still for too long
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         Log.d("ACCEL", "(" + sensorEvent.values[0] + ","
                 + sensorEvent.values[1] + "," + sensorEvent.values[2] + ")");
 
+        if (mVelocity[0] < ACCELERATION_THRESHOLD && mVelocity[1] < ACCELERATION_THRESHOLD) {
+            mStationaryCount++;
+            if(mStationaryCount >= RESET_COUNT) {
+                mStationaryCount = 0;
+                Arrays.fill(mVelocity, 0.0);
+            }
+        }
+
         //update velocity if accleration is greater than .25
         if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
-            mVelocity[0] += Math.abs(sensorEvent.values[0]) < .25 ? 0 : sensorEvent.values[0];
-            mVelocity[1] += Math.abs(sensorEvent.values[1]) < .25 ? 0 : sensorEvent.values[1];
-            mVelocity[2] += Math.abs(sensorEvent.values[2]) < .25 ? 0 : sensorEvent.values[2];
+            mVelocity[0] += Math.abs(sensorEvent.values[0]) < ACCELERATION_THRESHOLD ? 0 : sensorEvent.values[0];
+            mVelocity[1] += Math.abs(sensorEvent.values[1]) < ACCELERATION_THRESHOLD ? 0 : sensorEvent.values[1];
+            mVelocity[2] += Math.abs(sensorEvent.values[2]) < ACCELERATION_THRESHOLD ? 0 : sensorEvent.values[2];
         } else if (sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 
         }

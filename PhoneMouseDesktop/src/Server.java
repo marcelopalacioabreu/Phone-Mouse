@@ -16,18 +16,32 @@ public class Server {
 
         Mouse mouse = new Mouse(MouseInfo.getPointerInfo().getLocation(), screenSize);
 
-        while(true) {
+        while (true) {
             //create packet to hold data
             DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
             //put data in packet, this call blocks
             serverSocket.receive(receivePacket);
-            String data = new String(receivePacket.getData());
+
+
+            String data = new String(receivePacket.getData()).trim();
+            System.out.println(data);
+            if (data.equals("Connect")) {
+                String sendData = "Connected";
+                DatagramPacket sendPacket = new DatagramPacket(sendData.getBytes(), sendData.length(), receivePacket.getAddress(), UDP_PORT);
+                for(int i = 0; i < 20; i++) {
+                    serverSocket.send(sendPacket);
+                }
+                continue;
+            }
+            System.out.println(data + " why");
+
             //parse data into action
             Actions action = Parser.parse(data, receivePacket.getLength());
 
-            switch (action){
+            switch (action) {
                 case MOVE:
-                    double[] velocity = Parser.parseVelocity(data,receivePacket.getLength());
+                    double[] velocity = Parser.parseVelocity(data, receivePacket.getLength());
                     mouse.updatePos(velocity);
                     break;
                 case LEFT_PRESS:
@@ -44,7 +58,7 @@ public class Server {
                     break;
             }
 
-            //System.out.println(data);
+
         }
     }
 }
