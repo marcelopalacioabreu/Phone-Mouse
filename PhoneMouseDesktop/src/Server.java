@@ -29,15 +29,16 @@ public class Server {
             if (data.equals("Connect")) {
                 String sendData = "Connected";
                 DatagramPacket sendPacket = new DatagramPacket(sendData.getBytes(), sendData.length(), receivePacket.getAddress(), UDP_PORT);
-                for(int i = 0; i < 20; i++) {
-                    serverSocket.send(sendPacket);
-                }
+                serverSocket.send(sendPacket);
                 continue;
             }
-            System.out.println(data + " why");
 
             //parse data into action
             Actions action = Parser.parse(data, receivePacket.getLength());
+
+            if(action == null) {
+                continue;
+            }
 
             switch (action) {
                 case MOVE:
@@ -57,8 +58,6 @@ public class Server {
                     mouse.rightRelease();
                     break;
             }
-
-
         }
     }
 }

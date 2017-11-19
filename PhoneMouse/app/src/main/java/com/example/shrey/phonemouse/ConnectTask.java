@@ -21,23 +21,16 @@ public class ConnectTask extends AsyncTask<Void, Void, Boolean> {
 
     InetAddress mIpAddress;
     Context mContext;
+    DatagramSocket mSocket;
 
     public ConnectTask(Context context, String ipAddress) throws Exception {
         this.mContext = context;
         this.mIpAddress = InetAddress.getByName(ipAddress);
+        mSocket = new DatagramSocket(PORT);
     }
 
     @Override
     protected Boolean doInBackground(Void... voids) {
-
-        DatagramSocket socket;
-        try {
-            //create socket
-            socket = new DatagramSocket(PORT);
-        } catch (SocketException e) {
-            e.printStackTrace();
-            return false;
-        }
         while (!isCancelled()) {
             try {
                 String data = "Connect";
@@ -45,12 +38,13 @@ public class ConnectTask extends AsyncTask<Void, Void, Boolean> {
                 DatagramPacket sendPacket = new DatagramPacket(data.getBytes(), data.length(), mIpAddress
                         , PORT);
 
-                socket.send(sendPacket);
+                mSocket.send(sendPacket);
                 byte[] receiveBuffer = new byte[1024];
                 DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
-                socket.receive(receivePacket);
+                mSocket.receive(receivePacket);
                 String receiveStatus = new String(receivePacket.getData()).trim();
-                Log.d("RECE","sdfa");
+                mSocket.close();
+                Log.d("FINISHED",data);
                 return receiveStatus.equals("Connected");
             } catch (IOException e) {
                 e.printStackTrace();
@@ -65,10 +59,15 @@ public class ConnectTask extends AsyncTask<Void, Void, Boolean> {
         if (connectionResult) {
             Toast.makeText(mContext, "Connected", Toast.LENGTH_SHORT).show();
             Intent mouseIntent = new Intent(mContext, MouseActivity.class);
-            mouseIntent.putExtra("IP_ADDRESS", mIpAddress.toString());
+            mouseIntent.putExtra("IP_ADDRESS", mIpAddress);
             mContext.startActivity(mouseIntent);
         } else {
 
         }
+    }
+
+    public void closeSocket() {
+        Log.d("Close","CANCEL");
+        mSocket.close();
     }
 }

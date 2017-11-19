@@ -8,8 +8,13 @@ public class Parser {
         data = data.substring(0,length);
         String[] dataComponents = data.split(",");
 
-        Actions action = Actions.valueOf(dataComponents[0]);
-        return action;
+        try {
+            return Actions.valueOf(dataComponents[0]);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     /**

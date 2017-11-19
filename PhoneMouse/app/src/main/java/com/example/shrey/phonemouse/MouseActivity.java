@@ -34,7 +34,7 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
     private double[] mVelocity;
     private Queue<Actions> mActionQueue;
 
-    private AsyncTask<Void, Void, Void> mSocketTask;
+    private SocketTask mSocketTask;
 
     private InetAddress mIpAddress;
 
@@ -47,11 +47,7 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
 
         Intent intent = getIntent();
 
-        try {
-            InetAddress mIpAddress = InetAddress.getByName(intent.getStringExtra("IP_ADDRESS"));
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+        mIpAddress = (InetAddress)intent.getSerializableExtra("IP_ADDRESS");
 
         mVelocity = new double[3];
 
@@ -84,11 +80,9 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(this);
-        //close socket
-        mSocketTask.cancel(true);
+        mSocketTask.closeSocket();
     }
 
-    //TODO reset values when staying still for too long
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         Log.d("ACCEL", "(" + sensorEvent.values[0] + ","
@@ -97,6 +91,7 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
         if (mVelocity[0] < ACCELERATION_THRESHOLD && mVelocity[1] < ACCELERATION_THRESHOLD) {
             mStationaryCount++;
             if(mStationaryCount >= RESET_COUNT) {
+                Log.d("RESET","RESET");
                 mStationaryCount = 0;
                 Arrays.fill(mVelocity, 0.0);
             }
