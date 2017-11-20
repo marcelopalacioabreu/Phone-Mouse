@@ -1,63 +1,88 @@
+import javax.bluetooth.DiscoveryAgent;
+import javax.bluetooth.LocalDevice;
+import javax.bluetooth.RemoteDevice;
+import javax.bluetooth.UUID;
+import javax.microedition.io.Connector;
+import javax.microedition.io.StreamConnection;
+import javax.microedition.io.StreamConnectionNotifier;
 import java.awt.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
+import java.io.*;
 
-public class Server {
+//https://github.com/tdelazzari/JavaBluetooth/blob/master/BluetoothServer/src/bluetoothserver/Server.java
 
-    public static final int UDP_PORT = 9876;
+public class Server extends Thread {
 
-    public static void main(String[] args) throws Exception {
+    private String serviceURL;
+    private static UUID SERVICE_UUID = new UUID("0000110100001000800000805F9B34FB", false);
+    private LocalDevice localDevice;
+    private StreamConnectionNotifier streamNotifier;
+    private StreamConnection streamConnection;
 
-        //create socket with port number 9876
-        DatagramSocket serverSocket = new DatagramSocket(UDP_PORT);
-        //create data buffer
-        byte[] receiveData = new byte[1024];
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    private Mouse mouse;
+    private double[] velocity;
 
-        Mouse mouse = new Mouse(MouseInfo.getPointerInfo().getLocation(), screenSize);
+    public Server() {
+        mouse = new Mouse(MouseInfo.getPointerInfo().getLocation(), Toolkit.getDefaultToolkit().getScreenSize());
 
-        while (true) {
-            //create packet to hold data
-            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+        this.serviceURL = "btspp://localhost:" + SERVICE_UUID + ";name=" + "btserver" + ";authorize=true";
+        try {
+            // Init Bluetooth device
+            localDevice = LocalDevice.getLocalDevice();
+            localDevice.setDiscoverable(DiscoveryAgent.GIAC);
+            // Creating a Bluetooth service
+            System.out.println("Service started on address: " + localDevice.getBluetoothAddress());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-            //put data in packet, this call blocks
-            serverSocket.receive(receivePacket);
+    @Override
+    public void run() {
+        try {
 
+            streamNotifier = (StreamConnectionNotifier) Connector.open(serviceURL);
+            System.out.println("Waiting for client connection...");
+            streamConnection = streamNotifier.acceptAndOpen();
+            System.out.println("Bluetooth client is connected");
+            BufferedReader in = new BufferedReader(new InputStreamReader(streamConnection.openDataInputStream()));
+            while (true) {
+                String data = in.readLine();
+                if(data == null) {
+                    break;
+                }
 
-            String data = new String(receivePacket.getData()).trim();
-            System.out.println(data);
-            if (data.equals("Connect")) {
-                String sendData = "Connected";
-                DatagramPacket sendPacket = new DatagramPacket(sendData.getBytes(), sendData.length(), receivePacket.getAddress(), UDP_PORT);
-                serverSocket.send(sendPacket);
-                continue;
+                System.out.println(data);
+
+                Actions action = Parser.parse(data);
+
+                if(action == null) {
+                    continue;
+                }
+
+                switch (action) {
+                    case MOVE:
+                        velocity = Parser.parseVelocity(data);
+                        mouse.updatePos(velocity);
+                        break;
+                    case LEFT_PRESS:
+                        mouse.leftPress();
+                        break;
+                    case RIGHT_PRESS:
+                        mouse.rightPress();
+                        break;
+                    case LEFT_RELEASE:
+                        mouse.leftRelease();
+                        break;
+                    case RIGHT_RELEASE:
+                        mouse.rightRelease();
+                        break;
+                }
             }
-
-            //parse data into action
-            Actions action = Parser.parse(data, receivePacket.getLength());
-
-            if(action == null) {
-                continue;
-            }
-
-            switch (action) {
-                case MOVE:
-                    double[] velocity = Parser.parseVelocity(data, receivePacket.getLength());
-                    mouse.updatePos(velocity);
-                    break;
-                case LEFT_PRESS:
-                    mouse.leftPress();
-                    break;
-                case RIGHT_PRESS:
-                    mouse.rightPress();
-                    break;
-                case LEFT_RELEASE:
-                    mouse.leftRelease();
-                    break;
-                case RIGHT_RELEASE:
-                    mouse.rightRelease();
-                    break;
-            }
+            System.out.println("Close");
+            streamConnection.close();
+            streamNotifier.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

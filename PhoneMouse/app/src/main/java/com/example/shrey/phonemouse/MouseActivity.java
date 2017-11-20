@@ -1,5 +1,6 @@
 package com.example.shrey.phonemouse;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
@@ -36,7 +37,7 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
 
     private SocketTask mSocketTask;
 
-    private InetAddress mIpAddress;
+    private BluetoothDevice mBluetoothDevice;
 
     private int mStationaryCount;
 
@@ -47,7 +48,7 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
 
         Intent intent = getIntent();
 
-        mIpAddress = (InetAddress)intent.getSerializableExtra("IP_ADDRESS");
+        mBluetoothDevice = (BluetoothDevice) intent.getParcelableExtra("BLUETOOTH_DEVICE");
 
         mVelocity = new double[3];
 
@@ -72,15 +73,16 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
 
         mActionQueue = new LinkedList<>();
         //setup socket
-        mSocketTask = new SocketTask(mVelocity, mActionQueue, mIpAddress);
+        mSocketTask = new SocketTask(mVelocity, mActionQueue, mBluetoothDevice);
         mSocketTask.execute();
     }
 
     @Override
     protected void onPause() {
-        super.onPause();
+    super.onPause();
         mSensorManager.unregisterListener(this);
-        mSocketTask.closeSocket();
+        mSocketTask.cancel(true);
+        Log.d("PAUSE","PAUSE");
     }
 
     @Override
@@ -132,6 +134,7 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                Log.d("RIGHT_CLICK","RIGHT_CLICK");
                 mActionQueue.add(Actions.RIGHT_PRESS);
             } else if (event.getAction() == MotionEvent.ACTION_UP) {
                 mActionQueue.add(Actions.RIGHT_RELEASE);

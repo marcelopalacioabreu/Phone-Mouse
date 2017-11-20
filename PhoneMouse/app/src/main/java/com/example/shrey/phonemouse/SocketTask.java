@@ -1,15 +1,23 @@
 package com.example.shrey.phonemouse;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Queue;
+import java.util.UUID;
 
 /**
  * Created by area5 on 11/12/2017.
@@ -21,8 +29,7 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
     private static int PORT = 9876;
     private double[] mVelocity;
     private Queue<Actions> mActionQueue;
-    private InetAddress mIpAddress;
-    private DatagramSocket mSocket;
+    private BluetoothSocket mSocket;
 
     /**
      * Create SocketTask pass in reference to mVelocity array and a queue for user actions
@@ -30,47 +37,47 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
      * @param mVelocity    double[]
      * @param mActionQueue Queue<Integer>
      */
-    public SocketTask(double[] mVelocity, Queue<Actions> mActionQueue, InetAddress ipAddress) {
+    public SocketTask(double[] mVelocity, Queue<Actions> mActionQueue, BluetoothDevice device) {
         this.mVelocity = mVelocity;
         this.mActionQueue = mActionQueue;
-        this.mIpAddress = ipAddress;
         try {
-            //create mSocket
-            mSocket = new DatagramSocket(PORT);
-        } catch (SocketException e) {
+            mSocket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+        } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     @Override
     protected Void doInBackground(Void... voids) {
-        while (!isCancelled()) {
+        try {
+            // Connect to the remote device through the socket. This call blocks
+            // until it succeeds or throws an exception.
+            mSocket.connect();
+        } catch (IOException connectException) {
+
+            // Unable to connect; close the socket and return.
             try {
-                String data = "";
-                //if there non-movement actions send, otherwise send movement
-                if (!mActionQueue.isEmpty()) {
-                    data = mActionQueue.remove() + "";
-                } else {
-                    data = Actions.MOVE
-                            + "," + mVelocity[0] + "," + mVelocity[1] + "," + mVelocity[2];
-                }
+                mSocket.close();
+            } catch (IOException closeException) {
 
-                Log.d("mSocket", mIpAddress.getHostAddress());
-                //send data
-                DatagramPacket packet = new DatagramPacket(data.getBytes(), data.length(), mIpAddress
-                        , PORT);
-
-                mSocket.send(packet);
-            } catch (IOException e) {
-                e.printStackTrace();
-                break;
             }
+            return null;
         }
-        mSocket.close();
+        try {
+            while(!isCancelled()) {
+                String data;
+                if(!mActionQueue.isEmpty()) {
+                    data = mActionQueue.remove() + "\n";
+                } else {
+                    data = Actions.MOVE + ","
+                            + mVelocity[0] + "," + mVelocity[1] + "," + mVelocity[2] + "\n";
+                }
+                mSocket.getOutputStream().write(data.getBytes());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return null;
-    }
-
-    public void closeSocket(){
-        mSocket.close();
     }
 }
