@@ -2,24 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="abd25d94-5a7a-4236-992f-99380ad90194" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/PairedDeviceAdapter.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/res/layout/device_card.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/libraries/net_sf_bluecove_bluecove_2_1_0.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/libraries/net_sf_bluecove_bluecove_gpl_2_1_0.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/Main.java" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/ConnectTask.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/PhoneMouseDesktop/Server$1.class" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/out/production/PhoneMouseDesktop/Server.class" afterPath="$PROJECT_DIR$/out/production/PhoneMouseDesktop/Server.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../PhoneMouse/app/build.gradle" afterPath="$PROJECT_DIR$/../PhoneMouse/app/build.gradle" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../PhoneMouse/app/src/main/AndroidManifest.xml" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/AndroidManifest.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/ConnectionActivity.java" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/ConnectionActivity.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/MouseActivity.java" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/MouseActivity.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/SocketTask.java" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/java/com/example/shrey/phonemouse/SocketTask.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../PhoneMouse/app/src/main/res/layout/activity_connection.xml" afterPath="$PROJECT_DIR$/../PhoneMouse/app/src/main/res/layout/activity_connection.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/PhoneMouseDesktop.iml" afterPath="$PROJECT_DIR$/PhoneMouseDesktop.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Parser.java" afterPath="$PROJECT_DIR$/src/Parser.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Server.java" afterPath="$PROJECT_DIR$/src/Server.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Mouse.java" afterPath="$PROJECT_DIR$/src/Mouse.java" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -54,11 +37,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Mouse.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="Mouse.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/Mouse.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-3">
-              <caret line="22" column="28" lean-forward="true" selection-start-line="22" selection-start-column="28" selection-end-line="22" selection-end-column="28" />
+            <state relative-caret-position="267">
+              <caret line="37" column="69" lean-forward="true" selection-start-line="37" selection-start-column="69" selection-end-line="37" selection-end-column="69" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="e#1096#1097#0" expanded="true" />
@@ -68,7 +51,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Server.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="Server.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Server.java">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="360">
@@ -118,11 +101,11 @@
       <list>
         <option value="$PROJECT_DIR$/src/SocketServer.java" />
         <option value="$PROJECT_DIR$/src/Actions.java" />
-        <option value="$PROJECT_DIR$/src/Mouse.java" />
         <option value="$PROJECT_DIR$/src/HelloTest.java" />
         <option value="$PROJECT_DIR$/src/Main.java" />
         <option value="$PROJECT_DIR$/src/Parser.java" />
         <option value="$PROJECT_DIR$/src/Server.java" />
+        <option value="$PROJECT_DIR$/src/Mouse.java" />
       </list>
     </option>
   </component>
@@ -132,7 +115,7 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="960" />
     <option name="y" value="-4" />
     <option name="width" value="960" />
@@ -358,15 +341,15 @@
       <workItem from="1511114548855" duration="670000" />
       <workItem from="1511117899992" duration="10182000" />
       <workItem from="1511134572042" duration="432000" />
-      <workItem from="1511135082278" duration="5904000" />
+      <workItem from="1511135082278" duration="9895000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="42902000" />
+    <option name="totallyTimeSpent" value="46893000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1920" height="1017" extended-state="7" />
+    <frame x="0" y="0" width="1920" height="1017" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -377,7 +360,7 @@
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.33333334" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.33333334" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3295964" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -819,24 +802,24 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/Mouse.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-3">
-          <caret line="22" column="28" lean-forward="true" selection-start-line="22" selection-start-column="28" selection-end-line="22" selection-end-column="28" />
-          <folding>
-            <element signature="imports" expanded="true" />
-            <element signature="e#1096#1097#0" expanded="true" />
-            <element signature="e#1153#1154#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/Server.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="360">
           <caret line="53" column="41" lean-forward="true" selection-start-line="53" selection-start-column="41" selection-end-line="53" selection-end-column="41" />
           <folding>
             <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/Mouse.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="267">
+          <caret line="37" column="69" lean-forward="true" selection-start-line="37" selection-start-column="69" selection-end-line="37" selection-end-column="69" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#1096#1097#0" expanded="true" />
+            <element signature="e#1153#1154#0" expanded="true" />
           </folding>
         </state>
       </provider>
