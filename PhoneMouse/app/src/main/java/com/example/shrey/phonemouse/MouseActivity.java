@@ -1,44 +1,77 @@
 package com.example.shrey.phonemouse;
 
+import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.ImageFormat;
+import android.graphics.PixelFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
+import android.media.ImageReader;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Size;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
-public class MouseActivity extends AppCompatActivity implements SensorEventListener {
+public class MouseActivity extends AppCompatActivity {
 
-    public static final double ACCELERATION_THRESHOLD = .25;
-    public static final int RESET_COUNT = 50;
-    private SensorManager mSensorManager;
-    private Sensor mAccelerometer;
-    private Sensor mGyroscope;
 
     private Button leftMouseButton;
     private Button rightMouseButton;
-    private Button moveButton;
 
     private double[] mVelocity;
     private Queue<Actions> mActionQueue;
 
     private SocketTask mSocketTask;
-
     private BluetoothDevice mBluetoothDevice;
 
-    private boolean moveMode;
-    private long lastTime;
+    private CameraDevice mCameraDevice;
+    private CameraCaptureSession mCaptureSession;
+    private ImageReader mImageReader;
+
+
+    private HandlerThread mBackgroundThread;
+    private Handler mBackgroundHandler;
+
+    private CaptureRequest.Builder mPreviewRequestBuilder;
+    private CaptureRequest mPreviewRequest;
+
+    private ImageView imageView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,71 +84,187 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
 
         mVelocity = new double[3];
 
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-
         leftMouseButton = (Button) findViewById(R.id.left_mouse_button);
         rightMouseButton = (Button) findViewById(R.id.right_mouse_button);
-        moveButton = (Button) findViewById(R.id.move_button);
+
+        imageView = (ImageView) findViewById(R.id.imageView);
 
         leftMouseButton.setOnTouchListener(leftMouseButtonTouch);
         rightMouseButton.setOnTouchListener(rightMouseButtonTouch);
-        moveButton.setOnTouchListener(moveButtonTouch);
+
+        mActionQueue = new LinkedList<>();
+        openCamera();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-        mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_NORMAL);
 
         Arrays.fill(mVelocity, 0.0);
 
-        mActionQueue = new LinkedList<>();
+        mActionQueue.clear();
         //setup socket
         mSocketTask = new SocketTask(mVelocity, mActionQueue, mBluetoothDevice);
         mSocketTask.execute();
+        startBackgroundThread();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mSensorManager.unregisterListener(this);
         mSocketTask.cancel(true);
-        Log.d("PAUSE", "PAUSE");
+        stopBackgroundThread();
     }
 
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-        Log.d("ACCEL", "(" + sensorEvent.values[0] + ","
-                + sensorEvent.values[1] + "," + sensorEvent.values[2] + ")");
+    //https://github.com/googlesamples/android-Camera2Basic
+    private void openCamera() {
+        CameraManager cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+        try {
+            for (String cameraId : cameraManager.getCameraIdList()) {
+                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+                Integer facing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
+                if (facing != null && facing ==
+                        CameraCharacteristics.LENS_FACING_FRONT) {
+                    StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+                    Size minSize = Collections.min(Arrays.asList(map.getOutputSizes(ImageReader.class)), new Comparator<Size>() {
+                        @Override
+                        public int compare(Size o1, Size o2) {
+                            return Long.signum((long) o1.getWidth() * o1.getHeight() -
+                                    (long) o2.getWidth() * o2.getHeight());
+                        }
+                    });
+
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 200);
+                        return;
+                    }
+                    mImageReader = ImageReader.newInstance(minSize.getWidth(), minSize.getHeight(), ImageFormat.JPEG,2);
+
+                    mImageReader.setOnImageAvailableListener(imageAvailable, mBackgroundHandler);
 
 
-        if (lastTime == 0) {
-            lastTime = System.nanoTime();
-        }
-
-        //update velocity if accleration is greater than .25
-        //TODO account for lastTime difference
-        if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION && moveMode) {
-            long elapsedTime = (System.nanoTime() - lastTime) / 1000000000;
-            //same sign
-            if ((mVelocity[0] < 0) == (sensorEvent.values[0] < 0) && sensorEvent.values[0] > ACCELERATION_THRESHOLD) {
-                mVelocity[0] += sensorEvent.values[0] * elapsedTime;
+                    cameraManager.openCamera(cameraId, cameraStateCallback, mBackgroundHandler);
+                    break;
+                }
             }
-            if ((mVelocity[1] < 0) == (sensorEvent.values[1] < 0) && sensorEvent.values[1] > ACCELERATION_THRESHOLD) {
-                mVelocity[1] += sensorEvent.values[1] * elapsedTime;
-            }
-            if ((mVelocity[2] < 0) == (sensorEvent.values[2] < 0) && sensorEvent.values[2] > ACCELERATION_THRESHOLD) {
-                mVelocity[2] += sensorEvent.values[2] * elapsedTime;
-            }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
     }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
+    private void createCameraSession() {
 
+        try {
+            mPreviewRequestBuilder
+                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
+            Surface surface = mImageReader.getSurface();
+            mPreviewRequestBuilder.addTarget(surface);
+
+            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    mCaptureSession = session;
+                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+                    // Finally, we start displaying the camera preview.
+                    mPreviewRequest = mPreviewRequestBuilder.build();
+                    try {
+                        mCaptureSession.setRepeatingRequest(mPreviewRequest,
+                                null, mBackgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                }
+            }, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    ImageReader.OnImageAvailableListener imageAvailable = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            Image image = reader.acquireLatestImage();
+            if (image == null) {
+                return;
+            }
+
+            /*ByteBuffer yBuffer = image.getPlanes()[0].getBuffer();
+            ByteBuffer uBuffer = image.getPlanes()[1].getBuffer();
+            ByteBuffer vBuffer = image.getPlanes()[2].getBuffer();
+
+            int y = yBuffer.get(yBuffer.capacity()/2);
+            int u = uBuffer.get(uBuffer.capacity()/2);
+            int v = uBuffer.get(vBuffer.capacity()/2);
+
+            double r = y + 1.4075 * (v - 128);
+            double g = y - 0.3455 * (u - 128) - (0.7169 * (v - 128));
+            double b = y + 1.7790 * (u - 128);
+
+            Log.d("COLOR", r+","+g+","+b);*/
+
+            ByteBuffer buf = image.getPlanes()[0].getBuffer();
+            byte[] imageBytes= new byte[buf.remaining()];
+            buf.get(imageBytes);
+            final Bitmap bmp=BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
+            String hexColor = String.format("#%06X", (0xFFFFFF & bmp.getPixel(bmp.getWidth()/2,bmp.getHeight()/2)));
+
+            Log.d("Color",hexColor);
+
+            imageView.setImageBitmap(bmp);
+
+
+            image.close();
+        }
+    };
+
+    private CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            mCameraDevice = camera;
+            createCameraSession();
+            Log.d("Camera Opened","E");
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice camera) {
+            mCameraDevice.close();
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int error) {
+
+        }
+    };
+
+    private void startBackgroundThread() {
+        mBackgroundThread = new HandlerThread("CameraBackground");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    /**
+     * Stops the background thread and its {@link Handler}.
+     */
+    private void stopBackgroundThread() {
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private View.OnTouchListener leftMouseButtonTouch = new View.OnTouchListener() {
@@ -142,19 +291,6 @@ public class MouseActivity extends AppCompatActivity implements SensorEventListe
                 mActionQueue.add(Actions.RIGHT_PRESS);
             } else if (event.getAction() == MotionEvent.ACTION_UP) {
                 mActionQueue.add(Actions.RIGHT_RELEASE);
-            }
-            return true;
-        }
-    };
-
-    private View.OnTouchListener moveButtonTouch = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                moveMode = true;
-            } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                moveMode = false;
-                Arrays.fill(mVelocity, 0.0);
             }
             return true;
         }
