@@ -73,7 +73,9 @@ public class MouseActivity extends AppCompatActivity {
 
     private ImageView imageView;
 
-    private int lastColor;
+    private int[] colors = {0, 16777215, 16711680, 65280, 255};
+
+    private int lastColorIndex;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,7 +105,7 @@ public class MouseActivity extends AppCompatActivity {
         super.onResume();
 
         Arrays.fill(mVelocity, 0.0);
-        lastColor = -1;
+        lastColorIndex = -1;
 
         mActionQueue.clear();
         //setup socket
@@ -211,14 +213,52 @@ public class MouseActivity extends AppCompatActivity {
 
             int color = bmp.getPixel(bmp.getWidth() / 2, 0);
 
-            if (lastColor != -1) {
-                mVelocity[0] = Color.red(color) - Color.red(lastColor);
-                mVelocity[1] = Color.blue(color) - Color.blue(lastColor);
+            int index = 0;
+            int minDiff = Integer.MAX_VALUE;
+            for (int i = 0; i < colors.length; i++) {
+                int diff = Math.abs(Color.red(color)-Color.red(colors[i]))
+                        + Math.abs(Color.green(color)-Color.green(colors[i]))
+                        + Math.abs(Color.blue(color)-Color.blue(colors[i]));
+                if(diff < minDiff) {
+                    minDiff = diff;
+                    index = i;
+                }
             }
 
-            Log.d("VEL",mVelocity[0]+","+mVelocity[1]);
 
-            lastColor = color;
+
+            if (lastColorIndex != -1) {
+                int diff = index - lastColorIndex;
+
+                diff = (diff + 5)%5;
+                Log.d("DIFF",diff+"");
+                //below +1, right +2, left +3, above +4
+                switch(diff) {
+                    case 0:
+                        mVelocity[0] = 0;
+                        mVelocity[1] = 0;
+                        break;
+                    case 1:
+                        mVelocity[0] = 0;
+                        mVelocity[1] = -1;
+                        break;
+                    case 2:
+                        mVelocity[0] = 1;
+                        mVelocity[1] = 0;
+                        break;
+                    case 3:
+                        mVelocity[0] = -1;
+                        mVelocity[1] = 0;
+                        break;
+                    case 4:
+                        mVelocity[0] = 0;
+                        mVelocity[1] = 1;
+                        break;
+                }
+            }
+
+            lastColorIndex = index;
+
             imageView.setImageBitmap(bmp);
             image.close();
         }

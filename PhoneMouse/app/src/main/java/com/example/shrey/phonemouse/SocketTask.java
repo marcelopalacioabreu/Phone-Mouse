@@ -52,7 +52,6 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
         try {
             // Connect to the remote device through the socket. This call blocks
             // until it succeeds or throws an exception.
-            Log.d("SHEC","START");
             mSocket.connect();
         } catch (IOException connectException) {
 
@@ -73,7 +72,6 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
                     data = Actions.MOVE + ","
                             + mVelocity[0] + "," + mVelocity[1];
                 }
-                Log.d("SHEC",data);
                 mSocket.getOutputStream().write((data+"\n").getBytes());
             }
         } catch (IOException e) {
