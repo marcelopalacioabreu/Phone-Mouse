@@ -18,10 +18,10 @@ public class Parser {
     /**
      * Expects data to be a move action. Parses velocity after action type
      * @param data string of data
-     * @return double[3] for velocity
+     * @return double[2] for 2D velocity
      */
     public static double[] parseVelocity(String data) {
-        double[] velocity = new double[3];
+        double[] velocity = new double[2];
 
         String[] dataComponents = data.split(",");
 

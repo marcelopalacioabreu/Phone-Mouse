@@ -28,6 +28,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.graphics.ColorUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -72,6 +73,7 @@ public class MouseActivity extends AppCompatActivity {
 
     private ImageView imageView;
 
+    private int lastColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,7 +84,7 @@ public class MouseActivity extends AppCompatActivity {
 
         mBluetoothDevice = (BluetoothDevice) intent.getParcelableExtra("BLUETOOTH_DEVICE");
 
-        mVelocity = new double[3];
+        mVelocity = new double[2];
 
         leftMouseButton = (Button) findViewById(R.id.left_mouse_button);
         rightMouseButton = (Button) findViewById(R.id.right_mouse_button);
@@ -101,6 +103,7 @@ public class MouseActivity extends AppCompatActivity {
         super.onResume();
 
         Arrays.fill(mVelocity, 0.0);
+        lastColor = -1;
 
         mActionQueue.clear();
         //setup socket
@@ -124,7 +127,7 @@ public class MouseActivity extends AppCompatActivity {
                 CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
                 Integer facing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
                 if (facing != null && facing ==
-                        CameraCharacteristics.LENS_FACING_FRONT) {
+                        CameraCharacteristics.LENS_FACING_BACK) {
                     StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
                     Size minSize = Collections.min(Arrays.asList(map.getOutputSizes(ImageReader.class)), new Comparator<Size>() {
@@ -139,7 +142,7 @@ public class MouseActivity extends AppCompatActivity {
                         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 200);
                         return;
                     }
-                    mImageReader = ImageReader.newInstance(minSize.getWidth(), minSize.getHeight(), ImageFormat.JPEG,2);
+                    mImageReader = ImageReader.newInstance(minSize.getWidth(), minSize.getHeight(), ImageFormat.JPEG, 2);
 
                     mImageReader.setOnImageAvailableListener(imageAvailable, mBackgroundHandler);
 
@@ -167,7 +170,9 @@ public class MouseActivity extends AppCompatActivity {
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     mCaptureSession = session;
                     mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                            CaptureRequest.CONTROL_MODE_OFF);
+                    mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_TORCH);
 
                     // Finally, we start displaying the camera preview.
                     mPreviewRequest = mPreviewRequestBuilder.build();
@@ -199,31 +204,22 @@ public class MouseActivity extends AppCompatActivity {
                 return;
             }
 
-            /*ByteBuffer yBuffer = image.getPlanes()[0].getBuffer();
-            ByteBuffer uBuffer = image.getPlanes()[1].getBuffer();
-            ByteBuffer vBuffer = image.getPlanes()[2].getBuffer();
-
-            int y = yBuffer.get(yBuffer.capacity()/2);
-            int u = uBuffer.get(uBuffer.capacity()/2);
-            int v = uBuffer.get(vBuffer.capacity()/2);
-
-            double r = y + 1.4075 * (v - 128);
-            double g = y - 0.3455 * (u - 128) - (0.7169 * (v - 128));
-            double b = y + 1.7790 * (u - 128);
-
-            Log.d("COLOR", r+","+g+","+b);*/
-
             ByteBuffer buf = image.getPlanes()[0].getBuffer();
-            byte[] imageBytes= new byte[buf.remaining()];
+            byte[] imageBytes = new byte[buf.remaining()];
             buf.get(imageBytes);
-            final Bitmap bmp=BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
-            String hexColor = String.format("#%06X", (0xFFFFFF & bmp.getPixel(bmp.getWidth()/2,bmp.getHeight()/2)));
+            final Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
 
-            Log.d("Color",hexColor);
+            int color = bmp.getPixel(bmp.getWidth() / 2, 0);
 
+            if (lastColor != -1) {
+                mVelocity[0] = Color.red(color) - Color.red(lastColor);
+                mVelocity[1] = Color.blue(color) - Color.blue(lastColor);
+            }
+
+            Log.d("VEL",mVelocity[0]+","+mVelocity[1]);
+
+            lastColor = color;
             imageView.setImageBitmap(bmp);
-
-
             image.close();
         }
     };
@@ -233,7 +229,7 @@ public class MouseActivity extends AppCompatActivity {
         public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             createCameraSession();
-            Log.d("Camera Opened","E");
+            Log.d("Camera Opened", "E");
         }
 
         @Override

@@ -26,7 +26,6 @@ import java.util.UUID;
 //shreyc2
 
 public class SocketTask extends AsyncTask<Void, Void, Void> {
-    private static int PORT = 9876;
     private double[] mVelocity;
     private Queue<Actions> mActionQueue;
     private BluetoothSocket mSocket;
@@ -53,6 +52,7 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
         try {
             // Connect to the remote device through the socket. This call blocks
             // until it succeeds or throws an exception.
+            Log.d("SHEC","START");
             mSocket.connect();
         } catch (IOException connectException) {
 
@@ -68,12 +68,13 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
             while(!isCancelled()) {
                 String data;
                 if(!mActionQueue.isEmpty()) {
-                    data = mActionQueue.remove() + "\n";
+                    data = mActionQueue.remove()+"";
                 } else {
                     data = Actions.MOVE + ","
-                            + mVelocity[0] + "," + mVelocity[1] + "," + mVelocity[2] + "\n";
+                            + mVelocity[0] + "," + mVelocity[1];
                 }
-                mSocket.getOutputStream().write(data.getBytes());
+                Log.d("SHEC",data);
+                mSocket.getOutputStream().write((data+"\n").getBytes());
             }
         } catch (IOException e) {
             e.printStackTrace();
