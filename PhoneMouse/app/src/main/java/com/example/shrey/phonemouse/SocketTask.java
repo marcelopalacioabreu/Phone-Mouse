@@ -26,6 +26,7 @@ import java.util.UUID;
 //shreyc2
 
 public class SocketTask extends AsyncTask<Void, Void, Void> {
+    public static final String BLUETOOTH_UUID = "00001101-0000-1000-8000-00805F9B34FB";
     private double[] mVelocity;
     private Queue<Actions> mActionQueue;
     private BluetoothSocket mSocket;
@@ -40,7 +41,7 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
         this.mVelocity = mVelocity;
         this.mActionQueue = mActionQueue;
         try {
-            mSocket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+            mSocket = device.createRfcommSocketToServiceRecord(UUID.fromString(BLUETOOTH_UUID));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -66,6 +67,7 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
         try {
             while(!isCancelled()) {
                 String data;
+                //send velocity if no other user interaction
                 if(!mActionQueue.isEmpty()) {
                     data = mActionQueue.remove()+"";
                 } else {

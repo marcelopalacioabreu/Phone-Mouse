@@ -73,6 +73,7 @@ public class MouseActivity extends AppCompatActivity {
 
     private ImageView imageView;
 
+    //black, white, red, green, blue
     private int[] colors = {0, 16777215, 16711680, 65280, 255};
 
     private int lastColorIndex;
@@ -126,13 +127,19 @@ public class MouseActivity extends AppCompatActivity {
         CameraManager cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
         try {
             for (String cameraId : cameraManager.getCameraIdList()) {
-                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+                CameraCharacteristics cameraCharacteristics = cameraManager
+                        .getCameraCharacteristics(cameraId);
                 Integer facing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
-                if (facing != null && facing ==
-                        CameraCharacteristics.LENS_FACING_BACK) {
-                    StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-                    Size minSize = Collections.min(Arrays.asList(map.getOutputSizes(ImageReader.class)), new Comparator<Size>() {
+                //camera is facing backwards
+                if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
+                    StreamConfigurationMap map = cameraCharacteristics
+                            .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+                    //get smallest size
+                    Size minSize = Collections.min(
+                            Arrays.asList(map.getOutputSizes(ImageReader.class)),
+                            new Comparator<Size>() {
                         @Override
                         public int compare(Size o1, Size o2) {
                             return Long.signum((long) o1.getWidth() * o1.getHeight() -
@@ -140,11 +147,16 @@ public class MouseActivity extends AppCompatActivity {
                         }
                     });
 
-                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 200);
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) !=
+                            PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(
+                                this,
+                                new String[]{Manifest.permission.CAMERA},
+                                200);
                         return;
                     }
-                    mImageReader = ImageReader.newInstance(minSize.getWidth(), minSize.getHeight(), ImageFormat.JPEG, 2);
+                    mImageReader = ImageReader
+                            .newInstance(minSize.getWidth(), minSize.getHeight(), ImageFormat.JPEG, 2);
 
                     mImageReader.setOnImageAvailableListener(imageAvailable, mBackgroundHandler);
 
@@ -167,7 +179,8 @@ public class MouseActivity extends AppCompatActivity {
             Surface surface = mImageReader.getSurface();
             mPreviewRequestBuilder.addTarget(surface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+            mCameraDevice.createCaptureSession(Arrays.asList(surface),
+                    new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     mCaptureSession = session;
@@ -211,8 +224,10 @@ public class MouseActivity extends AppCompatActivity {
             buf.get(imageBytes);
             final Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
 
+            //get top middle pixel
             int color = bmp.getPixel(bmp.getWidth() / 2, 0);
 
+            //find closet color by measuring difference
             int index = 0;
             int minDiff = Integer.MAX_VALUE;
             for (int i = 0; i < colors.length; i++) {
@@ -232,7 +247,7 @@ public class MouseActivity extends AppCompatActivity {
 
                 diff = (diff + 5)%5;
                 Log.d("DIFF",diff+"");
-                //below +1, right +2, left +3, above +4
+                //still 0, below +1, right +2, left +3, above +4
                 switch(diff) {
                     case 0:
                         mVelocity[0] = 0;
