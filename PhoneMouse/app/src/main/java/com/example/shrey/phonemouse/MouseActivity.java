@@ -46,6 +46,7 @@ import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import java.nio.Buffer;
@@ -56,6 +57,10 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+
+import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.highgui.Highgui.IMREAD_COLOR;
+import static org.opencv.highgui.Highgui.IMREAD_GRAYSCALE;
 
 public class MouseActivity extends AppCompatActivity {
 
@@ -90,9 +95,9 @@ public class MouseActivity extends AppCompatActivity {
 
     static {
         if (!OpenCVLoader.initDebug()) {
-            Log.d("OPENCV","FAILURE");
+            Log.d("OPENCV", "FAILURE");
         } else {
-            Log.d("OPENCV","SUCCESS");
+            Log.d("OPENCV", "SUCCESS");
             isOpenCVLoaded = true;
         }
     }
@@ -176,7 +181,7 @@ public class MouseActivity extends AppCompatActivity {
                     }
 
                     mImageReader = ImageReader.newInstance(minSize.getWidth(), minSize.getHeight(),
-                            ImageFormat.YUV_420_888, 2);
+                            ImageFormat.JPEG, 2);
 
                     mImageReader.setOnImageAvailableListener(imageAvailable, mBackgroundHandler);
 
@@ -237,32 +242,37 @@ public class MouseActivity extends AppCompatActivity {
             }
 
             long time = System.nanoTime();
-            Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
+            //Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
 
-            //get greyscale data from YUV
-            Image.Plane Y = image.getPlanes()[0];
-            ByteBuffer byteBuffer = Y.getBuffer();
-            byte[] data = new byte[byteBuffer.remaining()];
-            byteBuffer.get(data);
+            Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
 
-            if(isOpenCVLoaded) {
-                Mat mat = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
-                mat.put(0, 0, data);
-                mat.convertTo();
-
-                if (lastImageMat != null) {
-                    Point point = Imgproc.phaseCorrelate(mat, lastImageMat);
-                    Log.d("Point", point.x + "," + point.y);
-                }
-
-                Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(mat, bmp);
-
-                imageView.setImageBitmap(bmp);
+            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            buf.put(0, 0, bytes);
 
 
-                lastImageMat = mat;
+            Mat mat = Highgui.imdecode(buf, IMREAD_GRAYSCALE);
+            Imgproc.threshold(mat,mat,100,255,Imgproc.THRESH_BINARY);
+            Mat floatMat = new Mat(mat.rows(), mat.cols(), CvType.CV_32FC1);
+            mat.convertTo(floatMat, CvType.CV_32FC1);
+
+
+            if (lastImageMat != null) {
+                Point point = Imgproc.phaseCorrelate(floatMat, lastImageMat);
+                //switching vals because matricies are y then x
+                mVelocity[0] = point.y;
+                mVelocity[1] = point.x;
             }
+
+            Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(mat, bmp);
+
+            imageView.setImageBitmap(bmp);
+
+
+            lastImageMat = floatMat;
+
             image.close();
             lastTime = time;
         }
