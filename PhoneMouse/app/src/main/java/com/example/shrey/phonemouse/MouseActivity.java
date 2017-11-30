@@ -32,6 +32,7 @@ import android.support.v4.graphics.ColorUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.Surface;
@@ -212,7 +213,7 @@ public class MouseActivity extends AppCompatActivity {
                                     CaptureRequest.CONTROL_MODE_OFF);
                             mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE,
                                     CaptureRequest.FLASH_MODE_TORCH);
-
+                            
                             // Finally, we start displaying the camera preview.
                             mPreviewRequest = mPreviewRequestBuilder.build();
                             try {
@@ -242,7 +243,7 @@ public class MouseActivity extends AppCompatActivity {
             }
 
             long time = System.nanoTime();
-            //Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
+            Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
 
             Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
 
@@ -253,7 +254,6 @@ public class MouseActivity extends AppCompatActivity {
 
 
             Mat mat = Highgui.imdecode(buf, IMREAD_GRAYSCALE);
-            Imgproc.threshold(mat,mat,100,255,Imgproc.THRESH_BINARY);
             Mat floatMat = new Mat(mat.rows(), mat.cols(), CvType.CV_32FC1);
             mat.convertTo(floatMat, CvType.CV_32FC1);
 
