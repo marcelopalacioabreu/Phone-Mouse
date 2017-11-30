@@ -32,12 +32,23 @@ import android.support.v4.graphics.ColorUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -47,6 +58,10 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+
+import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.highgui.Highgui.IMREAD_COLOR;
+import static org.opencv.highgui.Highgui.IMREAD_GRAYSCALE;
 
 public class MouseActivity extends AppCompatActivity {
 
@@ -73,10 +88,20 @@ public class MouseActivity extends AppCompatActivity {
 
     private ImageView imageView;
 
-    //black, white, red, green, blue
-    private int[] colors = {0, 16777215, 16711680, 65280, 255};
+    private Mat lastImageMat;
 
-    private int lastColorIndex;
+    private long lastTime;
+
+    private static boolean isOpenCVLoaded;
+
+    static {
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("OPENCV", "FAILURE");
+        } else {
+            Log.d("OPENCV", "SUCCESS");
+            isOpenCVLoaded = true;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,7 +131,6 @@ public class MouseActivity extends AppCompatActivity {
         super.onResume();
 
         Arrays.fill(mVelocity, 0.0);
-        lastColorIndex = -1;
 
         mActionQueue.clear();
         //setup socket
@@ -140,13 +164,14 @@ public class MouseActivity extends AppCompatActivity {
                     Size minSize = Collections.min(
                             Arrays.asList(map.getOutputSizes(ImageReader.class)),
                             new Comparator<Size>() {
-                        @Override
-                        public int compare(Size o1, Size o2) {
-                            return Long.signum((long) o1.getWidth() * o1.getHeight() -
-                                    (long) o2.getWidth() * o2.getHeight());
-                        }
-                    });
+                                @Override
+                                public int compare(Size o1, Size o2) {
+                                    return Long.signum((long) o1.getWidth() * o1.getHeight() -
+                                            (long) o2.getWidth() * o2.getHeight());
+                                }
+                            });
 
+                    //make sure you have permissions
                     if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) !=
                             PackageManager.PERMISSION_GRANTED) {
                         ActivityCompat.requestPermissions(
@@ -155,8 +180,9 @@ public class MouseActivity extends AppCompatActivity {
                                 200);
                         return;
                     }
-                    mImageReader = ImageReader
-                            .newInstance(minSize.getWidth(), minSize.getHeight(), ImageFormat.JPEG, 2);
+
+                    mImageReader = ImageReader.newInstance(minSize.getWidth(), minSize.getHeight(),
+                            ImageFormat.JPEG, 2);
 
                     mImageReader.setOnImageAvailableListener(imageAvailable, mBackgroundHandler);
 
@@ -171,7 +197,6 @@ public class MouseActivity extends AppCompatActivity {
     }
 
     private void createCameraSession() {
-
         try {
             mPreviewRequestBuilder
                     = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -181,34 +206,32 @@ public class MouseActivity extends AppCompatActivity {
 
             mCameraDevice.createCaptureSession(Arrays.asList(surface),
                     new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession session) {
-                    mCaptureSession = session;
-                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                            CaptureRequest.CONTROL_MODE_OFF);
-                    mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE,
-                            CaptureRequest.FLASH_MODE_TORCH);
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession session) {
+                            mCaptureSession = session;
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                    CaptureRequest.CONTROL_MODE_OFF);
+                            mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE,
+                                    CaptureRequest.FLASH_MODE_TORCH);
+                            
+                            // Finally, we start displaying the camera preview.
+                            mPreviewRequest = mPreviewRequestBuilder.build();
+                            try {
+                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
+                                        null, mBackgroundHandler);
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+                        }
 
-                    // Finally, we start displaying the camera preview.
-                    mPreviewRequest = mPreviewRequestBuilder.build();
-                    try {
-                        mCaptureSession.setRepeatingRequest(mPreviewRequest,
-                                null, mBackgroundHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
 
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
-                }
-            }, mBackgroundHandler);
+                        }
+                    }, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-
-
     }
 
     ImageReader.OnImageAvailableListener imageAvailable = new ImageReader.OnImageAvailableListener() {
@@ -219,63 +242,39 @@ public class MouseActivity extends AppCompatActivity {
                 return;
             }
 
-            ByteBuffer buf = image.getPlanes()[0].getBuffer();
-            byte[] imageBytes = new byte[buf.remaining()];
-            buf.get(imageBytes);
-            final Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+            long time = System.nanoTime();
+            Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
 
-            //get top middle pixel
-            int color = bmp.getPixel(bmp.getWidth() / 2, 0);
+            Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
 
-            //find closet color by measuring difference
-            int index = 0;
-            int minDiff = Integer.MAX_VALUE;
-            for (int i = 0; i < colors.length; i++) {
-                int diff = Math.abs(Color.red(color)-Color.red(colors[i]))
-                        + Math.abs(Color.green(color)-Color.green(colors[i]))
-                        + Math.abs(Color.blue(color)-Color.blue(colors[i]));
-                if(diff < minDiff) {
-                    minDiff = diff;
-                    index = i;
-                }
+            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            buf.put(0, 0, bytes);
+
+
+            Mat mat = Highgui.imdecode(buf, IMREAD_GRAYSCALE);
+            Mat floatMat = new Mat(mat.rows(), mat.cols(), CvType.CV_32FC1);
+            mat.convertTo(floatMat, CvType.CV_32FC1);
+
+
+            if (lastImageMat != null) {
+                Point point = Imgproc.phaseCorrelate(floatMat, lastImageMat);
+                //switching vals because matricies are y then x
+                mVelocity[0] = point.y;
+                mVelocity[1] = point.x;
             }
 
-
-
-            if (lastColorIndex != -1) {
-                int diff = index - lastColorIndex;
-
-                diff = (diff + 5)%5;
-                Log.d("DIFF",diff+"");
-                //still 0, below +1, right +2, left +3, above +4
-                switch(diff) {
-                    case 0:
-                        mVelocity[0] = 0;
-                        mVelocity[1] = 0;
-                        break;
-                    case 1:
-                        mVelocity[0] = 0;
-                        mVelocity[1] = -1;
-                        break;
-                    case 2:
-                        mVelocity[0] = 1;
-                        mVelocity[1] = 0;
-                        break;
-                    case 3:
-                        mVelocity[0] = -1;
-                        mVelocity[1] = 0;
-                        break;
-                    case 4:
-                        mVelocity[0] = 0;
-                        mVelocity[1] = 1;
-                        break;
-                }
-            }
-
-            lastColorIndex = index;
+            Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(mat, bmp);
 
             imageView.setImageBitmap(bmp);
+
+
+            lastImageMat = floatMat;
+
             image.close();
+            lastTime = time;
         }
     };
 
@@ -284,7 +283,7 @@ public class MouseActivity extends AppCompatActivity {
         public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             createCameraSession();
-            Log.d("Camera Opened", "E");
+            Log.d("Camera Opened", "Opened");
         }
 
         @Override
@@ -338,7 +337,6 @@ public class MouseActivity extends AppCompatActivity {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                Log.d("RIGHT_CLICK", "RIGHT_CLICK");
                 mActionQueue.add(Actions.RIGHT_PRESS);
             } else if (event.getAction() == MotionEvent.ACTION_UP) {
                 mActionQueue.add(Actions.RIGHT_RELEASE);
