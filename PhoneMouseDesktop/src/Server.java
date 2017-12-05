@@ -53,27 +53,28 @@ public class Server extends Thread {
 
                 System.out.println(data);
 
-                Actions action = Parser.parse(data);
-
-                if(action == null) {
-                    continue;
-                }
+                int action = Parser.parse(data);
 
                 switch (action) {
-                    case MOVE:
+                    case 0:
+                        //velocity
                         velocity = Parser.parseVelocity(data);
                         mouse.updatePos(velocity);
                         break;
-                    case LEFT_PRESS:
+                    case 1:
+                        //left press
                         mouse.leftPress();
                         break;
-                    case RIGHT_PRESS:
+                    case 2:
+                        //right press
                         mouse.rightPress();
                         break;
-                    case LEFT_RELEASE:
+                    case 3:
+                        //left release
                         mouse.leftRelease();
                         break;
-                    case RIGHT_RELEASE:
+                    case 4:
+                        //right release
                         mouse.rightRelease();
                         break;
                 }

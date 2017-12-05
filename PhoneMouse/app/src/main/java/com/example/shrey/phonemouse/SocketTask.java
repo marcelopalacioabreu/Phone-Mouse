@@ -1,21 +1,11 @@
 package com.example.shrey.phonemouse;
 
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Queue;
 import java.util.UUID;
 
@@ -27,8 +17,9 @@ import java.util.UUID;
 
 public class SocketTask extends AsyncTask<Void, Void, Void> {
     public static final String BLUETOOTH_UUID = "00001101-0000-1000-8000-00805F9B34FB";
+    public static final int MOVE = 0;
     private double[] mVelocity;
-    private Queue<Actions> mActionQueue;
+    private Queue<Integer> mActionQueue;
     private BluetoothSocket mSocket;
 
     /**
@@ -37,12 +28,13 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
      * @param mVelocity    double[]
      * @param mActionQueue Queue<Integer>
      */
-    public SocketTask(double[] mVelocity, Queue<Actions> mActionQueue, BluetoothDevice device) {
+    public SocketTask(double[] mVelocity, Queue<Integer> mActionQueue, BluetoothDevice device) {
         this.mVelocity = mVelocity;
         this.mActionQueue = mActionQueue;
         try {
             mSocket = device.createRfcommSocketToServiceRecord(UUID.fromString(BLUETOOTH_UUID));
         } catch (IOException e) {
+            Log.d("Failed", "OHNO");
             e.printStackTrace();
         }
 
@@ -52,7 +44,7 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
     protected Void doInBackground(Void... voids) {
         try {
             // Connect to the remote device through the socket. This call blocks
-            // until it succeeds or throws an exception.
+            // until it succeeds or throws an exception
             mSocket.connect();
         } catch (IOException connectException) {
 
@@ -65,16 +57,15 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
             return null;
         }
         try {
-            while(!isCancelled()) {
+            while (!isCancelled()) {
                 String data;
                 //send velocity if no other user interaction
-                if(!mActionQueue.isEmpty()) {
-                    data = mActionQueue.remove()+"";
+                if (!mActionQueue.isEmpty()) {
+                    data = mActionQueue.remove() + "";
                 } else {
-                    data = Actions.MOVE + ","
-                            + mVelocity[0] + "," + mVelocity[1];
+                    data = String.format("%d,%.3f,%.3f", MOVE, mVelocity[0], mVelocity[1]);
                 }
-                mSocket.getOutputStream().write((data+"\n").getBytes());
+                mSocket.getOutputStream().write((data + "\n").getBytes());
             }
         } catch (IOException e) {
             e.printStackTrace();

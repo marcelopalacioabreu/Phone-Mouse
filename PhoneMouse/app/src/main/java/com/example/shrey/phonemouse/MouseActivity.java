@@ -2,19 +2,10 @@ package com.example.shrey.phonemouse;
 
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.ImageFormat;
-import android.graphics.PixelFormat;
-import android.graphics.SurfaceTexture;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -28,11 +19,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.graphics.ColorUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.Range;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.Surface;
@@ -40,8 +29,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -50,27 +37,27 @@ import org.opencv.core.Point;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 
-import static org.opencv.core.CvType.CV_32F;
-import static org.opencv.highgui.Highgui.IMREAD_COLOR;
 import static org.opencv.highgui.Highgui.IMREAD_GRAYSCALE;
 
 public class MouseActivity extends AppCompatActivity {
 
 
+    public static final int LEFT_PRESS = 1;
+    public static final int LEFT_RELEASE = 3;
+    public static final int RIGHT_PRESS = 2;
+    public static final int RIGHT_RELEASE = 4;
     private Button leftMouseButton;
     private Button rightMouseButton;
 
     private double[] mVelocity;
-    private Queue<Actions> mActionQueue;
+    private Queue<Integer> mActionQueue;
 
     private SocketTask mSocketTask;
     private BluetoothDevice mBluetoothDevice;
@@ -87,6 +74,7 @@ public class MouseActivity extends AppCompatActivity {
     private CaptureRequest mPreviewRequest;
 
     private ImageView imageView;
+    private CanvasView canvasView;
 
     private Mat lastImageMat;
 
@@ -117,10 +105,11 @@ public class MouseActivity extends AppCompatActivity {
         leftMouseButton = (Button) findViewById(R.id.left_mouse_button);
         rightMouseButton = (Button) findViewById(R.id.right_mouse_button);
 
-        imageView = (ImageView) findViewById(R.id.imageView);
-
         leftMouseButton.setOnTouchListener(leftMouseButtonTouch);
         rightMouseButton.setOnTouchListener(rightMouseButtonTouch);
+
+        imageView = (ImageView) findViewById(R.id.image_view);
+        canvasView = (CanvasView) findViewById(R.id.canvas_view);
 
         mActionQueue = new LinkedList<>();
         openCamera();
@@ -243,7 +232,7 @@ public class MouseActivity extends AppCompatActivity {
             }
 
             long time = System.nanoTime();
-            Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
+            //Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
 
             Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
 
@@ -261,8 +250,9 @@ public class MouseActivity extends AppCompatActivity {
             if (lastImageMat != null) {
                 Point point = Imgproc.phaseCorrelate(floatMat, lastImageMat);
                 //switching vals because matricies are y then x
-                mVelocity[0] = point.y;
+                mVelocity[0] = -point.y;
                 mVelocity[1] = point.x;
+                canvasView.updatePos(mVelocity[0],mVelocity[1]);
             }
 
             Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
@@ -283,7 +273,7 @@ public class MouseActivity extends AppCompatActivity {
         public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             createCameraSession();
-            Log.d("Camera Opened", "Opened");
+            //Log.d("Camera Opened", "Opened");
         }
 
         @Override
@@ -323,9 +313,9 @@ public class MouseActivity extends AppCompatActivity {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                mActionQueue.add(Actions.LEFT_PRESS);
+                mActionQueue.add(LEFT_PRESS);
             } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                mActionQueue.add(Actions.LEFT_RELEASE);
+                mActionQueue.add(LEFT_RELEASE);
             }
             return true;
         }
@@ -337,9 +327,9 @@ public class MouseActivity extends AppCompatActivity {
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                mActionQueue.add(Actions.RIGHT_PRESS);
+                mActionQueue.add(RIGHT_PRESS);
             } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                mActionQueue.add(Actions.RIGHT_RELEASE);
+                mActionQueue.add(RIGHT_RELEASE);
             }
             return true;
         }

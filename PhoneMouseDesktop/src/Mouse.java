@@ -31,7 +31,7 @@ public class Mouse {
      * @param velocity double array size 3
      */
     public void updatePos(double[] velocity) {
-        mouseX += -velocity[0] * .01;
+        mouseX += velocity[0] * .01;
         mouseY += velocity[1] * .01;
 
         mouseX = Math.max(0,Math.min(screenSize.getWidth(),mouseX));

@@ -3,16 +3,9 @@ public class Parser {
      * Parse string received from client
      * @param data string
      */
-    public static Actions parse(String data) {
-        String[] dataComponents = data.split(",");
-
-        try {
-            return Actions.valueOf(dataComponents[0]);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
+    public static int parse(String data) {
+        //parse char to int
+        return data.charAt(0)-'0';
     }
 
     /**
