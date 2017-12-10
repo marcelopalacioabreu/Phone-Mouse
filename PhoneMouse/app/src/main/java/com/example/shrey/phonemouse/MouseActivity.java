@@ -22,6 +22,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.Surface;
@@ -44,6 +45,7 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import static org.opencv.highgui.Highgui.IMREAD_COLOR;
 import static org.opencv.highgui.Highgui.IMREAD_GRAYSCALE;
 
 public class MouseActivity extends AppCompatActivity {
@@ -80,14 +82,13 @@ public class MouseActivity extends AppCompatActivity {
 
     private long lastTime;
 
-    private static boolean isOpenCVLoaded;
+    private Range<Integer> maxFps;
 
     static {
         if (!OpenCVLoader.initDebug()) {
             Log.d("OPENCV", "FAILURE");
         } else {
             Log.d("OPENCV", "SUCCESS");
-            isOpenCVLoaded = true;
         }
     }
 
@@ -104,12 +105,11 @@ public class MouseActivity extends AppCompatActivity {
 
         leftMouseButton = (Button) findViewById(R.id.left_mouse_button);
         rightMouseButton = (Button) findViewById(R.id.right_mouse_button);
+        canvasView = (CanvasView) findViewById(R.id.canvas_view);
 
         leftMouseButton.setOnTouchListener(leftMouseButtonTouch);
         rightMouseButton.setOnTouchListener(rightMouseButtonTouch);
 
-        imageView = (ImageView) findViewById(R.id.image_view);
-        canvasView = (CanvasView) findViewById(R.id.canvas_view);
 
         mActionQueue = new LinkedList<>();
         openCamera();
@@ -120,11 +120,12 @@ public class MouseActivity extends AppCompatActivity {
         super.onResume();
 
         Arrays.fill(mVelocity, 0.0);
-
         mActionQueue.clear();
+
         //setup socket
         mSocketTask = new SocketTask(mVelocity, mActionQueue, mBluetoothDevice);
         mSocketTask.execute();
+
         startBackgroundThread();
     }
 
@@ -157,6 +158,17 @@ public class MouseActivity extends AppCompatActivity {
                                 public int compare(Size o1, Size o2) {
                                     return Long.signum((long) o1.getWidth() * o1.getHeight() -
                                             (long) o2.getWidth() * o2.getHeight());
+                                }
+                            });
+
+                    Range<Integer>[] fpsRanges = cameraCharacteristics
+                            .get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+
+                    maxFps = Collections.max(Arrays.asList(fpsRanges),
+                            new Comparator<Range<Integer>>() {
+                                @Override
+                                public int compare(Range<Integer> o1, Range<Integer> o2) {
+                                    return Integer.compare(o1.getLower(), o2.getLower());
                                 }
                             });
 
@@ -202,7 +214,9 @@ public class MouseActivity extends AppCompatActivity {
                                     CaptureRequest.CONTROL_MODE_OFF);
                             mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE,
                                     CaptureRequest.FLASH_MODE_TORCH);
-                            
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
+                                    maxFps);
+
                             // Finally, we start displaying the camera preview.
                             mPreviewRequest = mPreviewRequestBuilder.build();
                             try {
@@ -223,7 +237,9 @@ public class MouseActivity extends AppCompatActivity {
         }
     }
 
-    ImageReader.OnImageAvailableListener imageAvailable = new ImageReader.OnImageAvailableListener() {
+    ImageReader.OnImageAvailableListener imageAvailable =
+            new ImageReader.OnImageAvailableListener() {
+
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireLatestImage();
@@ -232,7 +248,7 @@ public class MouseActivity extends AppCompatActivity {
             }
 
             long time = System.nanoTime();
-            //Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
+            Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
 
             Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
 
@@ -241,8 +257,8 @@ public class MouseActivity extends AppCompatActivity {
             buffer.get(bytes);
             buf.put(0, 0, bytes);
 
-
             Mat mat = Highgui.imdecode(buf, IMREAD_GRAYSCALE);
+            Log.d("TYPE",mat.type()+"");
             Mat floatMat = new Mat(mat.rows(), mat.cols(), CvType.CV_32FC1);
             mat.convertTo(floatMat, CvType.CV_32FC1);
 
@@ -252,14 +268,8 @@ public class MouseActivity extends AppCompatActivity {
                 //switching vals because matricies are y then x
                 mVelocity[0] = -point.y;
                 mVelocity[1] = point.x;
-                canvasView.updatePos(mVelocity[0],mVelocity[1]);
+                canvasView.updatePos(mVelocity[0], mVelocity[1]);
             }
-
-            Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(mat, bmp);
-
-            imageView.setImageBitmap(bmp);
-
 
             lastImageMat = floatMat;
 
@@ -273,7 +283,6 @@ public class MouseActivity extends AppCompatActivity {
         public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             createCameraSession();
-            //Log.d("Camera Opened", "Opened");
         }
 
         @Override

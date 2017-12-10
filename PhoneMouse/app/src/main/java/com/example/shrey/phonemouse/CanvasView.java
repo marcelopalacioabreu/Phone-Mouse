@@ -10,6 +10,7 @@ import android.util.AttributeSet;
 import android.view.View;
 
 public class CanvasView extends View {
+    public static final int RADIUS = 30;
     private ShapeDrawable mDrawable;
     private double x = 0;
     private double y = 0;
@@ -34,6 +35,6 @@ public class CanvasView extends View {
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.RED);
 
-        canvas.drawCircle(width/2+(float)x,height/2-(float)y,30, paint);
+        canvas.drawCircle(width/2+(float)x,height/2-(float)y, RADIUS, paint);
     }
 }
