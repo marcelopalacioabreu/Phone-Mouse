@@ -44,6 +44,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import static org.opencv.highgui.Highgui.IMREAD_COLOR;
 import static org.opencv.highgui.Highgui.IMREAD_GRAYSCALE;
@@ -84,6 +86,12 @@ public class MouseActivity extends AppCompatActivity {
 
     private Range<Integer> maxFps;
 
+    /**
+     * A {@link Semaphore} to prevent the app from exiting before closing the camera.
+     */
+    private Semaphore mCameraOpenCloseLock = new Semaphore(1);
+
+
     static {
         if (!OpenCVLoader.initDebug()) {
             Log.d("OPENCV", "FAILURE");
@@ -110,9 +118,7 @@ public class MouseActivity extends AppCompatActivity {
         leftMouseButton.setOnTouchListener(leftMouseButtonTouch);
         rightMouseButton.setOnTouchListener(rightMouseButtonTouch);
 
-
         mActionQueue = new LinkedList<>();
-        openCamera();
     }
 
     @Override
@@ -127,13 +133,15 @@ public class MouseActivity extends AppCompatActivity {
         mSocketTask.execute();
 
         startBackgroundThread();
+        openCamera();
     }
 
     @Override
     protected void onPause() {
-        super.onPause();
+        closeCamera();
         mSocketTask.cancel(true);
         stopBackgroundThread();
+        super.onPause();
     }
 
     //https://github.com/googlesamples/android-Camera2Basic
@@ -187,12 +195,16 @@ public class MouseActivity extends AppCompatActivity {
 
                     mImageReader.setOnImageAvailableListener(imageAvailable, mBackgroundHandler);
 
-
+                    if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+                        throw new RuntimeException("Time out waiting to lock camera opening.");
+                    }
                     cameraManager.openCamera(cameraId, cameraStateCallback, mBackgroundHandler);
                     break;
                 }
             }
         } catch (CameraAccessException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -281,17 +293,23 @@ public class MouseActivity extends AppCompatActivity {
     private CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
+            mCameraOpenCloseLock.release();
             mCameraDevice = camera;
             createCameraSession();
         }
 
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
-            mCameraDevice.close();
+            mCameraOpenCloseLock.release();
+            camera.close();
+            mCameraDevice = null;
         }
 
         @Override
         public void onError(@NonNull CameraDevice camera, int error) {
+            mCameraOpenCloseLock.release();
+            camera.close();
+            mCameraDevice = null;
 
         }
     };
@@ -313,6 +331,28 @@ public class MouseActivity extends AppCompatActivity {
             mBackgroundHandler = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void closeCamera() {
+        try {
+            mCameraOpenCloseLock.acquire();
+            if (null != mCaptureSession) {
+                mCaptureSession.close();
+                mCaptureSession = null;
+            }
+            if (null != mCameraDevice) {
+                mCameraDevice.close();
+                mCameraDevice = null;
+            }
+            if (null != mImageReader) {
+                mImageReader.close();
+                mImageReader = null;
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
+        } finally {
+            mCameraOpenCloseLock.release();
         }
     }
 

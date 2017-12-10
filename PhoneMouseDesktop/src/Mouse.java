@@ -1,9 +1,9 @@
-import com.sun.xml.internal.ws.resources.DispatchMessages;
-
 import java.awt.*;
 import java.awt.event.InputEvent;
 
 public class Mouse {
+    public static final double SENSITIVITY_X = .03;
+    public static final double SENSITIVITY_Y = .03;
     private Robot robot;
     private double mouseX;
     private double mouseY;
@@ -31,12 +31,11 @@ public class Mouse {
      * @param velocity double array size 3
      */
     public void updatePos(double[] velocity) {
-        mouseX += velocity[0] * .01;
-        mouseY += velocity[1] * .01;
+        mouseX += velocity[0] * SENSITIVITY_X;
+        mouseY += velocity[1] * SENSITIVITY_Y;
 
         mouseX = Math.max(0,Math.min(screenSize.getWidth(),mouseX));
         mouseY = Math.max(0,Math.min(screenSize.getHeight(),mouseY));
-
 
         robot.mouseMove((int)mouseX,(int)mouseY);
     }
