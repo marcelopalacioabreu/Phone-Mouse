@@ -63,7 +63,7 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
                 if (!mActionQueue.isEmpty()) {
                     data = mActionQueue.remove() + "";
                 } else {
-                    data = String.format("%d,%.3f,%.3f", MOVE, mVelocity[0], mVelocity[1]);
+                    data = String.format("%d,%.5f,%.5f", MOVE, mVelocity[0], mVelocity[1]);
                 }
                 mSocket.getOutputStream().write((data + "\n").getBytes());
             }

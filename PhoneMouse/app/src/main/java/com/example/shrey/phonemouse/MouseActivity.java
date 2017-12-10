@@ -278,8 +278,8 @@ public class MouseActivity extends AppCompatActivity {
             if (lastImageMat != null) {
                 Point point = Imgproc.phaseCorrelate(floatMat, lastImageMat);
                 //switching vals because matricies are y then x
-                mVelocity[0] = -point.y;
-                mVelocity[1] = point.x;
+                mVelocity[0] = -point.y * ((time - lastTime)/1000000000.0);
+                mVelocity[1] = point.x * ((time - lastTime)/1000000000.0);
                 canvasView.updatePos(mVelocity[0], mVelocity[1]);
             }
 

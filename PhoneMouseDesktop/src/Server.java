@@ -51,7 +51,7 @@ public class Server extends Thread {
                     break;
                 }
 
-                System.out.println(data);
+                //System.out.println(data);
 
                 int action = Parser.parse(data);
 
