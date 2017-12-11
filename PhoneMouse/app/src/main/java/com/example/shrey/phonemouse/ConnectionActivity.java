@@ -45,7 +45,7 @@ public class ConnectionActivity extends AppCompatActivity {
 
         mDevicesRecyclerView = (RecyclerView) findViewById(R.id.paired_devices_recycler_view);
         mLinearLayoutManager = new LinearLayoutManager(this);
-        mPairedDeviceAdapter = new PairedDeviceAdapter(this,pairedDevices);
+        mPairedDeviceAdapter = new PairedDeviceAdapter(this, pairedDevices);
         DividerItemDecoration dividerItemDecoration =
                 new DividerItemDecoration(mDevicesRecyclerView.getContext(),
                         LinearLayoutManager.VERTICAL);

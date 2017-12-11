@@ -1,1 +1,1 @@
-This is my Android Final Project for CS126. I'm creating an application that allows your phone to act as a moveable mouse. 
+I created an application for my CS 126 final project that allows your phone to acts a draggable mouse. This code should theoretically work with any android phone and desktop operating system since the code was written in java, but it was only tested with my Pixel 2 and laptop (Ubuntu). The phone has to be raise a couple inches above the table, so it can get a decent picture and for best results print out "random_noise.png".  

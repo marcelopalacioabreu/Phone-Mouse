@@ -34,7 +34,6 @@ public class SocketTask extends AsyncTask<Void, Void, Void> {
         try {
             mSocket = device.createRfcommSocketToServiceRecord(UUID.fromString(BLUETOOTH_UUID));
         } catch (IOException e) {
-            Log.d("Failed", "OHNO");
             e.printStackTrace();
         }
 

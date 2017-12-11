@@ -4,7 +4,6 @@ import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -28,10 +27,8 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -47,7 +44,6 @@ import java.util.Queue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static org.opencv.highgui.Highgui.IMREAD_COLOR;
 import static org.opencv.highgui.Highgui.IMREAD_GRAYSCALE;
 
 public class MouseActivity extends AppCompatActivity {
@@ -57,8 +53,6 @@ public class MouseActivity extends AppCompatActivity {
     public static final int LEFT_RELEASE = 3;
     public static final int RIGHT_PRESS = 2;
     public static final int RIGHT_RELEASE = 4;
-    private Button leftMouseButton;
-    private Button rightMouseButton;
 
     private double[] mVelocity;
     private Queue<Integer> mActionQueue;
@@ -77,21 +71,22 @@ public class MouseActivity extends AppCompatActivity {
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
 
-    private ImageView imageView;
-    private CanvasView canvasView;
+    private CanvasView mCanvasView;
 
-    private Mat lastImageMat;
+    private Button mLeftMouseButton;
+    private Button mRightMouseButton;
 
-    private long lastTime;
+    private Mat mLastImageMat;
 
-    private Range<Integer> maxFps;
+    private long mLastTime;
 
-    /**
-     * A {@link Semaphore} to prevent the app from exiting before closing the camera.
-     */
+    private Range<Integer> mMaxFps;
+
+    // A Semaphore to prevent the app from exiting before closing the camera.
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
 
+    //init opencv
     static {
         if (!OpenCVLoader.initDebug()) {
             Log.d("OPENCV", "FAILURE");
@@ -111,12 +106,12 @@ public class MouseActivity extends AppCompatActivity {
 
         mVelocity = new double[2];
 
-        leftMouseButton = (Button) findViewById(R.id.left_mouse_button);
-        rightMouseButton = (Button) findViewById(R.id.right_mouse_button);
-        canvasView = (CanvasView) findViewById(R.id.canvas_view);
+        mLeftMouseButton = (Button) findViewById(R.id.left_mouse_button);
+        mRightMouseButton = (Button) findViewById(R.id.right_mouse_button);
+        mCanvasView = (CanvasView) findViewById(R.id.canvas_view);
 
-        leftMouseButton.setOnTouchListener(leftMouseButtonTouch);
-        rightMouseButton.setOnTouchListener(rightMouseButtonTouch);
+        mLeftMouseButton.setOnTouchListener(leftMouseButtonTouch);
+        mRightMouseButton.setOnTouchListener(rightMouseButtonTouch);
 
         mActionQueue = new LinkedList<>();
     }
@@ -172,7 +167,9 @@ public class MouseActivity extends AppCompatActivity {
                     Range<Integer>[] fpsRanges = cameraCharacteristics
                             .get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
 
-                    maxFps = Collections.max(Arrays.asList(fpsRanges),
+
+                    //get fastest preview fps
+                    mMaxFps = Collections.max(Arrays.asList(fpsRanges),
                             new Comparator<Range<Integer>>() {
                                 @Override
                                 public int compare(Range<Integer> o1, Range<Integer> o2) {
@@ -222,12 +219,13 @@ public class MouseActivity extends AppCompatActivity {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             mCaptureSession = session;
+
                             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                     CaptureRequest.CONTROL_MODE_OFF);
                             mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE,
                                     CaptureRequest.FLASH_MODE_TORCH);
                             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
-                                    maxFps);
+                                    mMaxFps);
 
                             // Finally, we start displaying the camera preview.
                             mPreviewRequest = mPreviewRequestBuilder.build();
@@ -252,43 +250,45 @@ public class MouseActivity extends AppCompatActivity {
     ImageReader.OnImageAvailableListener imageAvailable =
             new ImageReader.OnImageAvailableListener() {
 
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            Image image = reader.acquireLatestImage();
-            if (image == null) {
-                return;
-            }
+                @Override
+                public void onImageAvailable(ImageReader reader) {
+                    Image image = reader.acquireLatestImage();
+                    if (image == null) {
+                        return;
+                    }
 
-            long time = System.nanoTime();
-            Log.d("FPS", 1000000000.0 / (time - lastTime) + "");
+                    long time = System.nanoTime();
+                    Log.d("FPS", 1000000000.0 / (time - mLastTime) + "");
 
-            Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
+                    Mat buf = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC1);
 
-            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            buf.put(0, 0, bytes);
+                    //convert image to mat for phase correlate
+                    ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                    byte[] bytes = new byte[buffer.remaining()];
+                    buffer.get(bytes);
+                    buf.put(0, 0, bytes);
 
-            Mat mat = Highgui.imdecode(buf, IMREAD_GRAYSCALE);
-            Log.d("TYPE",mat.type()+"");
-            Mat floatMat = new Mat(mat.rows(), mat.cols(), CvType.CV_32FC1);
-            mat.convertTo(floatMat, CvType.CV_32FC1);
+                    Mat mat = Highgui.imdecode(buf, IMREAD_GRAYSCALE);
+                    Mat floatMat = new Mat(mat.rows(), mat.cols(), CvType.CV_32FC1);
+                    mat.convertTo(floatMat, CvType.CV_32FC1);
 
 
-            if (lastImageMat != null) {
-                Point point = Imgproc.phaseCorrelate(floatMat, lastImageMat);
-                //switching vals because matricies are y then x
-                mVelocity[0] = -point.y * ((time - lastTime)/1000000000.0);
-                mVelocity[1] = point.x * ((time - lastTime)/1000000000.0);
-                canvasView.updatePos(mVelocity[0], mVelocity[1]);
-            }
+                    if (mLastImageMat != null) {
+                        //get how far image moved
+                        Point point = Imgproc.phaseCorrelate(floatMat, mLastImageMat);
 
-            lastImageMat = floatMat;
+                        //switching vals because matricies are y then x
+                        mVelocity[0] = -point.y * ((time - mLastTime) / 1000000000.0);
+                        mVelocity[1] = point.x * ((time - mLastTime) / 1000000000.0);
+                        mCanvasView.updatePos(mVelocity[0], mVelocity[1]);
+                    }
 
-            image.close();
-            lastTime = time;
-        }
-    };
+                    mLastImageMat = floatMat;
+
+                    image.close();
+                    mLastTime = time;
+                }
+            };
 
     private CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -320,9 +320,6 @@ public class MouseActivity extends AppCompatActivity {
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
 
-    /**
-     * Stops the background thread and its {@link Handler}.
-     */
     private void stopBackgroundThread() {
         mBackgroundThread.quitSafely();
         try {

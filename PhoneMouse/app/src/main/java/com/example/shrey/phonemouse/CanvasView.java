@@ -27,14 +27,14 @@ public class CanvasView extends View {
 
 
     protected void onDraw(Canvas canvas) {
-       super.onDraw(canvas);
-       int width = canvas.getWidth();
-       int height = canvas.getHeight();
+        super.onDraw(canvas);
+        int width = canvas.getWidth();
+        int height = canvas.getHeight();
 
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.RED);
 
-        canvas.drawCircle(width/2+(float)x,height/2-(float)y, RADIUS, paint);
+        canvas.drawCircle(width / 2 + (float) x, height / 2 - (float) y, RADIUS, paint);
     }
 }

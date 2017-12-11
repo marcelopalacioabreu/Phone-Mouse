@@ -23,17 +23,16 @@ public class PairedDeviceAdapter extends RecyclerView.Adapter<PairedDeviceAdapte
     private List<BluetoothDevice> mPairedDevices;
     private Context mContext;
 
-    public PairedDeviceAdapter (Context context, Set<BluetoothDevice> pairedDevices) {
+    public PairedDeviceAdapter(Context context, Set<BluetoothDevice> pairedDevices) {
         mContext = context;
         this.mPairedDevices = new ArrayList<BluetoothDevice>(pairedDevices);
     }
 
 
-
     @Override
     public PairedDeviceAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.device_card,parent,false);
+                .inflate(R.layout.device_card, parent, false);
         return new ViewHolder(v);
     }
 
@@ -45,9 +44,8 @@ public class PairedDeviceAdapter extends RecyclerView.Adapter<PairedDeviceAdapte
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("TAPPED",device.getName());
                 Intent mouseIntent = new Intent(mContext, MouseActivity.class);
-                mouseIntent.putExtra("BLUETOOTH_DEVICE",device);
+                mouseIntent.putExtra("BLUETOOTH_DEVICE", device);
                 mContext.startActivity(mouseIntent);
             }
         });
@@ -61,6 +59,7 @@ public class PairedDeviceAdapter extends RecyclerView.Adapter<PairedDeviceAdapte
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public TextView mDeviceNameText;
         public TextView mDeviceAddressText;
+
         public ViewHolder(View itemView) {
             super(itemView);
             mDeviceNameText = (TextView) itemView.findViewById(R.id.device_name);
