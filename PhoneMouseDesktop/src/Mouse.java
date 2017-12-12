@@ -2,8 +2,8 @@ import java.awt.*;
 import java.awt.event.InputEvent;
 
 public class Mouse {
-    public static final double SENSITIVITY_X = .03;
-    public static final double SENSITIVITY_Y = .03;
+    public static final double SENSITIVITY_X = .3;
+    public static final double SENSITIVITY_Y = .3;
     private Robot robot;
     private double mouseX;
     private double mouseY;
