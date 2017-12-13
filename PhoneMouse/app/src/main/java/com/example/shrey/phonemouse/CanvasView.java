@@ -11,6 +11,7 @@ import android.view.View;
 
 public class CanvasView extends View {
     public static final int RADIUS = 30;
+    public static final int CANVAS_MOVEMENT_MULTIPLYER = 30;
     private ShapeDrawable mDrawable;
     private double x = 0;
     private double y = 0;
@@ -20,8 +21,8 @@ public class CanvasView extends View {
     }
 
     public void updatePos(double x, double y) {
-        this.x = x;
-        this.y = y;
+        this.x = x * CANVAS_MOVEMENT_MULTIPLYER;
+        this.y = y * CANVAS_MOVEMENT_MULTIPLYER;
         invalidate();
     }
 
